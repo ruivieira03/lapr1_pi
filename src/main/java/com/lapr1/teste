@@ -1,0 +1,415 @@
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class Main {
+	//private static double t = 0;
+
+	public static void main(String[] args) throws IOException {
+		Parametros parametros;
+
+		if (args.length != 0 && args.length!=10) {
+			System.out.println("O numero de argumentos é invalido");
+			return;
+		}
+
+		if (args.length==0){
+			//modo interactivo
+			parametros = pedirParametros();
+		}else{
+			parametros = lerLinhaComandos(args);
+		}
+
+		if (parametros==null)//erro
+			return;
+
+		List<String[]> parametrosModelo = readFile(parametros.ficheiroParametros);
+
+		//beta;gama;ro;alfa
+		double beta = Double.valueOf(parametrosModelo.get(0)[1]);
+		double gama = Double.valueOf(parametrosModelo.get(0)[2]);
+		double ro   = Double.valueOf(parametrosModelo.get(0)[3]);
+		double alfa = Double.valueOf(parametrosModelo.get(0)[4]);
+
+		if (parametros.metodo.equals("1")) {/*euler*/
+
+			double[][] result = euler(parametros.dias, parametros.passoIntegracao, parametros.populacao - 1, parametros.populacao, 1.0, 0.0 /*, 0.0, 0.0, 0.0*/, beta, gama, ro,alfa);
+
+			writeFile(parametros.ficheiroResultados, result);
+		}else{
+			//range kuta
+			double[][] result = rk4(parametros.dias, parametros.passoIntegracao, parametros.populacao - 1, parametros.populacao, 1.0, 0.0 /*, 0.0, 0.0, 0.0*/, beta, gama, ro, alfa);
+			//rk4(30, 0.1,  999.0, (double) 1000.0, (double) 1.0, (double) 0.0, (double) 0.0, (double) 0.0, (double) 0.0);
+			writeFile(parametros.ficheiroResultados, result);
+		}
+
+
+
+
+
+
+
+
+
+/*
+		double[][] result = euler(30, (double) 0.1, (double) 999.0, (double) 1000.0, (double) 1.0, (double) 0.0, (double) 0.0, (double) 0.0, (double) 0.0);
+		writeFile(result);
+		List<String[]> values = readFile("src/main/Files/exemplo_parametros_modelo.csv");
+		transformValues(values);
+		rk4(30, (double) 0.1, (double) 999.0, (double) 1000.0, (double) 1.0, (double) 0.0, (double) 0.0, (double) 0.0, (double) 0.0);
+*/
+
+	}
+
+
+
+	public static double fS(double t, double S, double gama, double alfa, double beta, double ro, double I) {
+		return (-beta) * S * I;
+	}
+
+	public static double fI(double t, double I, double gama, double alfa, double beta, double ro, double S, double R) {
+		return ro * beta * S * I - gama * I + alfa * R;
+	}
+
+	public static double fR(double t, double R, double gama, double alfa, double beta, double ro, double I, double S) {
+		return gama * I - alfa * R + (1 - ro) * beta * S * I;
+	}
+
+	/**
+	 *
+	 * @param n
+	 * @param h
+	 * @param S
+	 * @param N
+	 * @param I
+	 * @param R
+	 * @return
+	 */
+	public static double[][] euler(int n, double h, double S, double N, double I, double R , double beta, double gama, double ro, double alfa  /*, double Sn, double In, double Rn*/) {
+		double Sn, In, Rn;
+
+		//double t = 0;
+		/*double alfa = 0;
+		double beta = (double) 0.002;
+		double ro = (double) 0.6;
+		double gama = (double) 0.01;
+		*/
+
+
+		System.out.println("S:" + S);                                        // Conseguir valor de um ficheiro no futuro
+		System.out.println("I:" + I);
+		System.out.println("R:" + R);
+		System.out.println("N:" + N);
+		System.out.println();
+
+		double[][] results = new double[n][5];
+
+		for (int i = 0; i < n; i++) {
+
+			results[i][0] = i;
+			results[i][1] = S;
+			results[i][2] = I;
+			results[i][3] = R;
+			results[i][4] = S+I+R;
+
+			//for (double j = 0; j < 1; j+=h) {
+			for (double t = 0; t < 1; t+=h) {
+
+				Sn = S + h * fS((t + i * h), S, gama, alfa, beta, ro, I);                            // Fazer função f(x,y) para S, I e R
+				In = I + h * fI((t + i * h), I, gama, alfa, beta, ro, S, R);
+				Rn = R + h * fR((t + i * h), R, gama, alfa, beta, ro, I, S);
+				S = Sn;
+				I = In;
+				R = Rn;
+
+			}
+			/*System.out.println("S:" + Sn);                        // Imprimir resultados em ficheiros no futuro
+			System.out.println("I:" + In);
+			System.out.println("R:" + Rn);
+			System.out.println("N:" + (Sn + In + Rn));
+			//  System.out.println("i*h:" + (i*h));
+			System.out.println();*/
+
+		}
+
+		return results;
+	}
+
+
+	public static double[][]  rk4 (int n, double h, double S, double N, double I, double R , double beta, double gama, double ro, double alfa){
+	//public static double rk4 (int n, double h, double S, double N, double I, double R, double Sn, double In, double Rn) {
+		double t = 0;
+		double Sn, In, Rn;
+		/*double alfa = 0;
+		double beta = (double) 0.002;
+		double ro = (double) 0.6;
+		double gama = (double) 0.01;
+		*/
+		double k1S = 0;
+		double k1I = 0;
+		double k1R = 0;
+
+		double k2S = 0;
+		double k2I = 0;
+		double k2R = 0;
+
+		double k3S = 0;
+		double k3I = 0;
+		double k3R = 0;
+
+		double k4S = 0;
+		double k4I = 0;
+		double k4R = 0;
+
+		double kS = 0;
+		double kI = 0;
+		double kR = 0;
+
+		double[][] results = new double[n][5];
+		for (int i = 0; i < n; i++) {
+			results[i][0] = i;
+			results[i][1] = S;
+			results[i][2] = I;
+			results[i][3] = R;
+			results[i][4] = S+I+R;
+
+			for (double j = 0; j < 1; j+=h) {
+
+				k1S = h * fS(t, S, gama, alfa, beta, ro, I);
+				k1I = h * fI(t, I, gama, alfa, beta, ro, S, R);
+				k1R = h * fR(t, R, gama, alfa, beta, ro, I, S);
+
+				k2S = h * fS((t + h / 2), (S + k1S/2), gama, alfa, beta, ro, (I + k1S/2));
+				k2I = h * fI((t + h / 2), (I + k1I/2), gama, alfa, beta, ro, (S + k1I/2), (R + k1I/2));
+				k2R = h * fR((t + h / 2), (R + k1R/2), gama, alfa, beta, ro, (I + k1R/2), (S + k1R/2));
+
+				k3S = h * fS((t + h / 2), (S + k2S/2), gama, alfa, beta, ro, (I + k2S/2));
+				k3I = h * fI((t + h / 2), (I + k2I/2), gama, alfa, beta, ro, (S + k2I/2), (R + k2I/2));
+				k3R = h * fR((t + h / 2), (R + k2R/2), gama, alfa, beta, ro, (I + k2R/2), (S + k2R/2));
+
+				k4S = h * fS((t + h / 2), (S + k3S), gama, alfa, beta, ro, (I + k3S));
+				k4I = h * fI((t + h / 2), (I + k3I), gama, alfa, beta, ro, (S + k3I), (R + k3I));
+				k4R = h * fR((t + h / 2), (R + k3R), gama, alfa, beta, ro, (I + k3R), (S + k3R));
+
+				kS = (k1S + 2 * k2S + 2 * k3S + k4S) / 6;
+				kI = (k1I + 2 * k2I + 2 * k3I + k4I) / 6;
+				kR = (k1R + 2 * k2R + 2 * k3R + k4R) / 6;
+
+				Sn = S + kS;
+				In = I + kI;
+				Rn = R + kR;
+
+				S = Sn;
+				I = In;
+				R = Rn;
+
+				t = t + h;
+			}
+			/*
+			System.out.println("k1S:" + kS);
+			System.out.println("S:" + Sn);
+			System.out.println("I:" + In);
+			System.out.println("R:" + Rn);
+			System.out.println("N:" + (Sn + In + Rn));
+			System.out.println();
+			i++;*/
+
+		}
+		return results;
+	}
+
+	private static void writeFile(String ficheiro, double[][] matriz) throws IOException {
+		try {
+			File file = new File(ficheiro/*"src/main/Files/ficheiro_resultados.csv"*/);
+			FileWriter fw = new FileWriter(file);
+			fw.write("dia;S;I;R;N");
+
+			for (int i = 0; i < matriz.length; i++) {
+				fw.write(String.format("%n%d;%.5f;%.5f;%.5f;%.5f", (int)matriz[i][0], matriz[i][1],matriz[i][2],matriz[i][3],matriz[i][4]));
+				//fw.write("\n" + (int) matriz[i][0] + ";" + matriz[i][1] + ";" + matriz[i][2] + ";" + matriz[i][3] + ";" + matriz[i][4]);
+			}
+			fw.close();
+			System.out.println("Ficheiro criado com sucesso!");
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static List<String[]> readFile(String filename) throws IOException {
+
+		FileReader fr = null;
+		BufferedReader br = null;
+		List<String[]> result = new ArrayList<>();
+		try {
+
+			fr = new FileReader(filename);
+			br = new BufferedReader((fr));
+			br.readLine();
+			String line;
+
+			int i = 0;
+
+			while ((line = br.readLine()) != null) {
+				String[] values = line.split(";");
+				for (int j = 0; j < values.length; j++) {
+					values[j] = values[j].replace(",", ".");
+				}
+				result.add(values);
+				System.out.println(result.get(i)[0] + " " + result.get(i)[1] + " " + result.get(i)[2] + " " + result.get(i)[3] + " " + result.get(i)[4]);
+				i++;
+			}
+
+
+
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+				}
+			}
+			if (fr != null) {
+				try {
+					fr.close();
+				} catch (IOException e) {
+				}
+			}
+		}
+		return result;
+	}
+
+	private static void transformValues(List<String[]> values) {
+		String nome;
+		double beta;
+		double gama;
+		double ro;
+		double alfa;
+		for (int i = 0; i < values.size(); i++) {
+			nome = values.get(i)[0];
+			beta = Double.valueOf(values.get(i)[1]);
+			gama = Double.valueOf(values.get(i)[2]);
+			ro =   Double.valueOf(values.get(i)[3]);
+			alfa = Double.valueOf(values.get(i)[4]);
+			System.out.println(nome);
+			System.out.println(beta);
+			System.out.println(gama);
+			System.out.println(ro);
+			System.out.println(alfa);
+		}
+
+	}
+
+	private static Parametros lerLinhaComandos(String[] args) {
+		//modo nao interativo
+
+		Parametros parametros = new Parametros();
+		//programa.jar ficheiroSIR.csv -m X -p Y -t Z -d K ficheiroResultado.csv, em que:
+		//programa.jar ficheiroSIR.csv -m euler -p 0.5 -t 10000 -d 50 ficheiroResultado.csv, em que:
+		parametros.ficheiroParametros = args[0];
+		if (!args[1].equals("-m")){
+			System.out.println("Falta o parametro -m");
+			return null;
+		}
+		parametros.metodo=args[2];
+
+		if (!parametros.metodo.equals("1") && !parametros.metodo.equals("2")){
+			System.out.println("O parametro -m tem de ser 1-Euler ou 2-Range Kutta");
+			return null;
+		}
+
+		if (!args[3].equals("-p")){
+			System.out.println("Falta o parametro -p");
+			return null;
+		}
+		try {
+			parametros.passoIntegracao = Double.parseDouble(args[4]);
+
+			if (parametros.passoIntegracao <=0 || parametros.passoIntegracao >= 1){
+				System.out.println("o Parametro -p é invalido, tem de ser entre 0 e 1");
+				return null;
+			}
+
+		}catch(NumberFormatException ex){
+			System.out.println("o Parametro -p é invalido");
+			return null;
+		}
+
+		if (!args[5].equals("-t")){
+			System.out.println("Falta o parametro -t");
+			return null;
+		}
+		try {
+			parametros.populacao = Integer.parseInt(args[6]);
+		}catch(NumberFormatException ex){
+			System.out.println("o Parametro -t é invalido");
+			return null;
+		}
+
+		if (!args[7].equals("-d")){
+			System.out.println("Falta o parametro -d");
+			return null;
+		}
+		try {
+			parametros.dias = Integer.parseInt(args[8]);
+		}catch(NumberFormatException ex){
+			System.out.println("o Parametro -d é invalido");
+			return null;
+		}
+
+		parametros.ficheiroResultados = args[9];
+
+
+		return parametros;
+	}
+
+	private static Parametros pedirParametros() {
+		Parametros parametros = new Parametros();
+
+		Scanner sc = new Scanner(System.in);
+
+		System.out.println("Introduza o Ficheiro de Parametros");
+		parametros.ficheiroParametros = sc.nextLine();
+
+		boolean invalido;
+		do {
+			invalido = false;
+			System.out.println("Introduza o Metodo 1-Euler, 2-Range Kutta");
+			parametros.metodo = sc.nextLine();
+			if (!parametros.metodo.equals("1") && !parametros.metodo.equals("2") ) {
+				invalido = true;
+				System.out.println("o Parametro -m é invalido, tem de ser 1 ou 2");
+			}
+		}while(invalido);
+
+		do {
+			invalido = false;
+			System.out.println("Introduza Passo de Integracao");
+			parametros.passoIntegracao = sc.nextDouble();
+
+			if (parametros.passoIntegracao <= 0 || parametros.passoIntegracao >= 1) {
+				invalido = true;
+				System.out.println("o Parametro -p é invalido, tem de ser entre 0 e 1");
+			}
+		}while(invalido);
+
+		System.out.println("Introduza Tamanho da População");
+		parametros.populacao = sc.nextInt();
+
+		System.out.println("Introduza Numero de Dias");
+		parametros.dias = sc.nextInt();
+		sc.nextLine(); //para ler a mudanca de linha
+
+		System.out.println("Introduza Nome do ficheiro de resultados");
+		parametros.ficheiroResultados = sc.nextLine();
+
+		return parametros;
+
+	}
+
+}

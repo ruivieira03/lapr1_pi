@@ -1,0 +1,12 @@
+set title 'Distribuição de Noticias Falsas'
+set datafile separator ";"
+set xlabel 'Dias'
+set ylabel 'População'
+set key autotitle columnhead
+set terminal pngcairo
+set output 'resulta.png'
+set decimalsign ','
+set xrange[0:30]
+set yrange[0:1050]
+plot 'resulta.csv' using 0:2 with lines, 'resulta.csv' using 0:3 with lines, 'resulta.csv' using 0:4 with lines, 'resulta.csv' using 0:5 with lines
+set output
